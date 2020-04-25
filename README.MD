@@ -60,9 +60,10 @@ Not-A-Pad is a CLI based Python software that is made in 3 phases:
  - A convex hull is created for this MaxContour using a fusion of Jarvis and Graham Scan algorithm whose implementation details can be found [here][ConvexHull]. 
  - This convex hull returns us a list of points which consists of start, end and far points. More details can be found [here][ConvexHullOpenCV].
  - Now there were two choices for me at this stage:- Either to use ConvexityDefects in order to find the [defects][DefectsOpenCV] (far points in MaxContours from Convex Hull Boundary) in order to detect finger tips or loop through the convex hull points and detect acute angles using Cosine formula.
- - I tried both and found better results in the second choice. For an interval of every 16 points(Used this number using trial and error) in MaxContour, I found the Cosine between a point P and P + 40. I also found the Cosine between  P - 16 & P + 40 and P + 16 & P +40 and found the maximum Cosine among the three.
+ - ~~I tried both and found better results in the second choice. For an interval of every 16 points(Used this number using trial and error) in MaxContour, I found the Cosine between a point P and P + 40. I also found the Cosine between  P - 16 & P + 40 and P + 16 & P +40 and found the maximum Cosine among the three.
  - Also, I found the rotation between P & P + 40. 
- - Now if the rotation is only on one side and the cosine is less than 0.5 (Acute Angles), then we assume it as a finger. 
+ - Now if the rotation is only on one side and the cosine is less than 0.5 (Acute Angles), then we assume it as a finger. ~~
+ - I tried another method using defects. In this method, I find the defects and find the cosine of angle between far,start and end. If it is greater than a certain amount and if depth 'd' is greater than a certain amount, then a finger is detected. Also, this method doesn't detect a single finger because for that I need at least one defect which cannot be sufficiently produced by a single finger. Instead of single finger detection, I added the farthest point detection.
  - This algorithm has a flaw because it detects the angles formed at the edges of the Image when the hand is intersecting with the edge. It can be solved using an offset from the edges, which in my case, was 20.
  - This concludes the finger tip detection phase. It was by far the most complex step in this project.
 

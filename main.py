@@ -53,6 +53,31 @@ def on_high_S_thresh_trackbar(val):
     high_S = max(high_S, low_S+1)
     cv.setTrackbarPos(high_S_name, window_detection_name, high_S)
 
+def printInstructions():
+    print('Not-A-Pad')
+    print('Cursor movement and tracking system using Hand Gestures')
+    print('Made by Krunal Rank')
+    print('')
+
+    print('------------------------------------------Instructions-----------------------------------------------')
+    print('1. Calibrate your hand using the Hand Calibration window so that the software recognises your hand.')
+    print('   Please set the trackbar values so that your Hand, in front of your WebCam appears in WHITE and background appears in BLACK.')
+    print('   Suggested Values:-')
+    print('   Low H: 0','High H: 14','Low S: 45','High S: 255')
+    print('   You need not follow the above values. They are just for reference.')
+    print('2. Press "c" to confirm Hand Calibration')
+    print('3. Verify your Hand Calibration in "Live" window. Press "c" to recalibrate.')
+    print('4. Press "m" to enable or disable Mouse Movement. Note that your screen cursor will move accordingly.')
+    print('')
+
+    print('Controls:')
+    print('One Finger Detected - Uses its movement as Cursor Movement')
+    print('Two Fingers Detected - Double Click')
+    print('Three Fingers Detected - Scroll according to Cursor Position')
+    print('Esc - Exit to Calibration or Exit application')
+    print('c - Toggle Hand Calibration')
+    print('m - Toggle Mouse Movement')
+
 def showHandCalibration(frame):
     cv.namedWindow(window_capture_name)
     cv.namedWindow(window_detection_name)
@@ -74,10 +99,15 @@ def doubleClick():
 
 def scroll():
     if mouseMode==True:
-        pyautogui.scroll(10)
+        pyautogui.scroll(20)
+
 
 def filterForeground(frame):
     return
+    # kernel = np.ones((2, 2), np.uint8)
+    # frame = cv.morphologyEx(frame, cv.MORPH_OPEN, kernel, iterations=3)
+    # frame = cv.morphologyEx(frame, cv.MORPH_CLOSE, kernel, iterations=3)
+    # cv.imshow('DEBUG',frame)
     # cv.fastNlMeansDenoising(frame,frame)
     # cv.GaussianBlur(frame,(3,3),0,frame)
     # cv.medianBlur(frame,3,frame)
@@ -120,6 +150,13 @@ def getCentroid(contour):
         else:
             return None
 
+def calculateAngle(far, start, end):
+        a = math.sqrt((end[0] - start[0])**2 + (end[1] - start[1])**2)
+        b = math.sqrt((far[0] - start[0])**2 + (far[1] - start[1])**2)
+        c = math.sqrt((end[0] - far[0])**2 + (end[1] - far[1])**2)
+        cAngle = math.acos((b**2 + c**2 - a**2) / (2*b*c))
+        return cAngle
+
 def angle(contour,i,r):
     length = len(contour)
     if length==0:
@@ -155,29 +192,7 @@ cap = cv.VideoCapture(0,cv.CAP_DSHOW)
 
 calibrated = False
 
-print('Not-A-Pad')
-print('Cursor movement and tracking system using Hand Gestures')
-print('Made by Krunal Rank')
-print('')
-
-print('------------------------------------------Instructions-----------------------------------------------')
-print('1. Calibrate your hand using the Hand Calibration window so that the software recognises your hand.')
-print('   Please set the trackbar values so that your Hand, in front of your WebCam appears in WHITE and background appears in BLACK.')
-print('   Suggested Values:-')
-print('   Low H: 0','High H: 14','Low S: 45','High S: 255')
-print('   You need not follow the above values. They are just for reference.')
-print('2. Press "c" to confirm Hand Calibration')
-print('3. Verify your Hand Calibration in "Live" window. Press "c" to recalibrate.')
-print('4. Press "m" to enable or disable Mouse Movement. Note that your screen cursor will move accordingly.')
-print('')
-
-print('Controls:')
-print('One Finger Detected - Uses its movement as Cursor Movement')
-print('Two Fingers Detected - Double Click')
-print('Three Fingers Detected - Scroll according to Cursor Position')
-print('Esc - Exit to Calibration or Exit application')
-print('c - Toggle Hand Calibration')
-print('m - Toggle Mouse Movement')
+printInstructions()
 
 while True:
     
@@ -200,7 +215,6 @@ while True:
         showHandCalibration(foreground)
     else:
         filterForeground(foreground)
-
         contours = getContours(foreground)
         maxContour = getMaxContour(contours)
         
@@ -211,39 +225,39 @@ while True:
             hullPoints = cv.convexHull(maxContour,returnPoints=True)
             hullInts = cv.convexHull(maxContour,returnPoints=False)
             
+            # Detecting Hand Center
             centroid = getCentroid(maxContour)
-
+            
             fingerPoints = []
-            step = 16
-            r = 40
-            i = 0
-            while i< len(maxContour):
-                cos0 = angle(maxContour,i,r)
-
-                if cos0 >0.5 and step+i<len(maxContour):
-                    cos1 = angle (maxContour, i - step, r)
-                    cos2 = angle (maxContour, i + step, r)
-                    maxCos = max(max(cos0, cos1), cos2)
-                    temp = rotation (maxContour, i, r)
-                    if maxCos==cos0 and temp<0: 
-                        if(maxContour[i][0][0]>offset and maxContour[i][0][1]>offset and abs(maxContour[i][0][0]-foreground.shape[1])>offset and abs(maxContour[i][0][1]-foreground.shape[0])>offset ):
-                            fingerPoints.append(maxContour[i][0])
-
-                i = i + step
             
-
-            # if(len(hullInts)>3):
-            #     defects = cv.convexityDefects(maxContour,hullInts)
             
-            # if defects is None:
-            #     continue
+            cnt = 0
 
-            # for defect in defects:
-            #     (start,end,far,d)= defect[0]
+            if(len(hullInts)>0):
+                defects = cv.convexityDefects(maxContour,hullInts)
+                if defects is not None:
+                    for defect in defects:
+                        s, e, f, d = defect[0]
+                        start = tuple(maxContour[s, 0])
+                        end = tuple(maxContour[e, 0])
+                        far = tuple(maxContour[f, 0])
+                        cAngle = calculateAngle(far, start, end)
+                        # cv.circle(frame,far,5,(255,0,0),-1)
+                        if d > 10000 and cAngle <= math.pi/2:
+                            if(start[0]>offset and start[0]<foreground.shape[1]-offset and start[1]>offset and start[1]<foreground.shape[0]-offset and end[0]>offset and end[0]<foreground.shape[1]-offset and end[1]>offset and end[1]<foreground.shape[0]-offset):
+                                if(cnt==0):
+                                    fingerPoints.append(start)
+                                    fingerPoints.append(end)
+                                else:
+                                    fingerPoints.append(end)                            
+                                cnt += 1
+
+            if len(fingerPoints)==0:
+                farthestPoint = maxContour[maxContour[:,:,1].argmin()][0]
+                if(farthestPoint[0]>offset and farthestPoint[0]<foreground.shape[1]-offset and farthestPoint[1]>offset and farthestPoint[1]<foreground.shape[0]-offset):
+                    fingerPoints.append()
                 
-            #     cv.circle(frame,tuple(maxContour[end][0]),5,(0,0,255),-1)                
-            #     cv.circle(frame,tuple(maxContour[far][0]),5,(0,255,255),-1)
-            #     cv.circle(frame,tuple(maxContour[start][0]),5,(0,255,0),-1)
+
             if(len(fingerPoints)==2):
                 doubleClick()
             elif(len(fingerPoints)==1):
@@ -257,22 +271,25 @@ while True:
                 cv.circle(frame,(x,y),20,(0,255,0),2)
                 cv.line(frame,centroid,(x,y),(0,255,0),4)
             cv.circle(frame,centroid,20,(0,0,255),2)
+            
+
+
             cv.drawContours(frame,[hullPoints],0,(0,0,255),2)
         
     
+    cv.rectangle(frame,(offset,offset),(foreground.shape[1]-offset,foreground.shape[0]-offset),(255,0,0),1)
     cv.imshow(window_capture_name, frame)
-    # cv.imshow('Mask', foreground)
-    key = cv.waitKey(34)
-    if key == ord('q') or key == 27:
+    key = cv.waitKey(34) # Makes it 30 fps
+    if key == ord('q') or key == 27: # Exit the Program
         if(calibrated):
-            calibrated=False
+            calibrated=False 
         else:            
             break
-    elif key==ord('c'):
+    elif key==ord('c'): # Calibrate Hand
         if(calibrated):                  
             calibrated=False
         else:
             calibrated=True
             cv.destroyWindow(window_detection_name)
-    elif key==ord('m'):
+    elif key==ord('m'): # Toggle Mouse Mode
         mouseMode = False if mouseMode is True else True
