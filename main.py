@@ -255,7 +255,7 @@ while True:
             if len(fingerPoints)==0:
                 farthestPoint = maxContour[maxContour[:,:,1].argmin()][0]
                 if(farthestPoint[0]>offset and farthestPoint[0]<foreground.shape[1]-offset and farthestPoint[1]>offset and farthestPoint[1]<foreground.shape[0]-offset):
-                    fingerPoints.append()
+                    fingerPoints.append(farthestPoint)
                 
 
             if(len(fingerPoints)==2):
