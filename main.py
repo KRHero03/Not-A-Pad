@@ -14,6 +14,7 @@ low_V = 0
 high_H = max_value_H
 high_S = max_value
 high_V = max_value
+
 window_capture_name = 'Live'
 window_detection_name = 'Hand Calibration'
 low_H_name = 'Low H'
@@ -22,10 +23,8 @@ high_H_name = 'High H'
 high_S_name = 'High S'
 
 offset = 20
-
-mouseMode = False
-
-        
+delta = 33
+mouseMode = False        
 screenSize = pyautogui.size()
 
 def on_low_H_thresh_trackbar(val):
@@ -89,8 +88,8 @@ def showHandCalibration(frame):
 
 def moveMouse(farthestPoint, frame):
         if mouseMode==True:
-            targetX = farthestPoint[0] - offset - 10
-            targetY = farthestPoint[1] - offset - 10 
+            targetX = farthestPoint[0] - offset
+            targetY = farthestPoint[1] - offset
             pyautogui.moveTo(targetX*screenSize[0]/(frame.shape[1]-offset -10), targetY*screenSize[1]/(frame.shape[0]-offset-10))
 
 def doubleClick():
@@ -99,8 +98,7 @@ def doubleClick():
 
 def scroll():
     if mouseMode==True:
-        pyautogui.scroll(20)
-
+        pyautogui.scroll(30)
 
 def filterForeground(frame):
     return
@@ -187,7 +185,6 @@ def rotation(contour,i,r):
 
     return (ux*vy - vx*uy)
 
-
 cap = cv.VideoCapture(0,cv.CAP_DSHOW)
 
 calibrated = False
@@ -233,7 +230,7 @@ while True:
             
             cnt = 0
 
-            if(len(hullInts)>0):
+            if(len(hullInts)>3):
                 defects = cv.convexityDefects(maxContour,hullInts)
                 if defects is not None:
                     for defect in defects:
@@ -270,16 +267,17 @@ while True:
                 (x,y) = (point[0],point[1])
                 cv.circle(frame,(x,y),20,(0,255,0),2)
                 cv.line(frame,centroid,(x,y),(0,255,0),4)
-            cv.circle(frame,centroid,20,(0,0,255),2)
-            
 
+            cv.circle(frame,centroid,20,(0,0,255),2)
 
             cv.drawContours(frame,[hullPoints],0,(0,0,255),2)
         
     
     cv.rectangle(frame,(offset,offset),(foreground.shape[1]-offset,foreground.shape[0]-offset),(255,0,0),1)
     cv.imshow(window_capture_name, frame)
-    key = cv.waitKey(34) # Makes it 30 fps
+
+    key = cv.waitKey(delta) # Makes it 30 fps
+
     if key == ord('q') or key == 27: # Exit the Program
         if(calibrated):
             calibrated=False 
